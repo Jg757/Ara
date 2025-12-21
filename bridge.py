@@ -3,16 +3,56 @@ import websockets
 import json
 import os
 import ssl
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("XAI_API_KEY")
 XAI_URL = "wss://api.x.ai/v1/realtime"
+XAI_CHAT_URL = "https://api.x.ai/v1/chat/completions"
 
 # Setup SSL context for xAI (unverified as requested/working)
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
+
+# Vision processing via xAI Chat API
+async def process_image_vision(image_data_url: str, prompt: str = "Describe what you see in this image in detail.") -> str:
+    """Send image to xAI Vision API and get text description"""
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                XAI_CHAT_URL,
+                headers={
+                    "Authorization": f"Bearer {API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "grok-2-vision-latest",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "image_url", "image_url": {"url": image_data_url, "detail": "high"}},
+                                {"type": "text", "text": prompt}
+                            ]
+                        }
+                    ],
+                    "max_tokens": 1000
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                description = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                print(f"[Vision] Got description: {description[:100]}...")
+                return description
+            else:
+                print(f"[Vision] API error: {response.status_code} - {response.text}")
+                return f"Error analyzing image: {response.status_code}"
+    except Exception as e:
+        print(f"[Vision] Error: {e}")
+        return f"Error processing image: {str(e)}"
 
 async def proxy_handler(client_ws):
     print("Browser connected.")
@@ -100,10 +140,27 @@ async def proxy_handler(client_ws):
                                                     print(f"[Memory] Injected {len(relevant)} chars of context")
                                             except Exception as e:
                                                 print(f"[Memory] Search error: {e}")
-                    except:
-                        pass  # Not JSON or parse error, just forward
+                                                
+                                    # Check for image content that needs vision processing
+                                    if c.get('type') == 'image_url':
+                                        image_url = c.get('image_url', {}).get('url', '')
+                                        if image_url.startswith('data:image'):
+                                            print(f"[Vision] Processing image...")
+                                            # Get vision description
+                                            description = await process_image_vision(image_url)
+                                            
+                                            # Replace image with text description
+                                            c['type'] = 'input_text'
+                                            c['text'] = f"[I'm showing you an image. Here's what I see: {description}. Please respond to this image.]"
+                                            del c['image_url']
+                                            
+                                            # Update the message with modified content
+                                            message = json.dumps(data)
+                                            print(f"[Vision] Converted image to text description")
+                    except Exception as e:
+                        print(f"[Bridge] Parse error: {e}")  # Not JSON or parse error, just forward
                     
-                    # Forward original message
+                    # Forward original message (or modified if vision processed)
                     await xai_ws.send(message)
 
             # Task 2: xAI -> Browser (with memory saving)

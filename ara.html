@@ -934,35 +934,61 @@
 
             try {
                 if (file.type.startsWith('image/')) {
-                    // Read image as base64 and create accessible data URL
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const dataUrl = reader.result; // Full data URL with base64
-                        addTranscript('user', `[Uploaded image: ${file.name}]`);
+                    // Compress image to stay under WebSocket 1MB limit
+                    const compressImage = (file, maxSize = 600) => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                let width = img.width;
+                                let height = img.height;
 
-                        if (socket && socket.readyState === WebSocket.OPEN) {
-                            // Send image URL to xAI - put image first per xAI Vision docs
-                            socket.send(JSON.stringify({
-                                type: 'conversation.item.create',
-                                item: {
-                                    type: 'message',
-                                    role: 'user',
-                                    content: [
-                                        {
-                                            type: 'image_url',
-                                            image_url: {
-                                                url: dataUrl,
-                                                detail: 'high'
-                                            }
-                                        },
-                                        { type: 'input_text', text: `Please describe what you see in this image.` }
-                                    ]
+                                // Scale down if larger than maxSize
+                                if (width > height && width > maxSize) {
+                                    height = (height * maxSize) / width;
+                                    width = maxSize;
+                                } else if (height > maxSize) {
+                                    width = (width * maxSize) / height;
+                                    height = maxSize;
                                 }
-                            }));
-                            socket.send(JSON.stringify({ type: 'response.create' }));
-                        }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                // Convert to JPEG for smaller size
+                                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                            };
+                            img.src = URL.createObjectURL(file);
+                        });
                     };
-                    reader.readAsDataURL(file);
+
+                    const dataUrl = await compressImage(file);
+                    console.log(`[Image] Compressed to ${(dataUrl.length / 1024).toFixed(0)} KB`);
+                    addTranscript('user', `[Uploaded image: ${file.name}]`);
+
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        // Send image URL to xAI - put image first per xAI Vision docs
+                        socket.send(JSON.stringify({
+                            type: 'conversation.item.create',
+                            item: {
+                                type: 'message',
+                                role: 'user',
+                                content: [
+                                    {
+                                        type: 'image_url',
+                                        image_url: {
+                                            url: dataUrl,
+                                            detail: 'high'
+                                        }
+                                    },
+                                    { type: 'input_text', text: `Please describe what you see in this image.` }
+                                ]
+                            }
+                        }));
+                        socket.send(JSON.stringify({ type: 'response.create' }));
+                    }
                 } else {
                     // Read text file
                     const text = await file.text();
