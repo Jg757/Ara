@@ -9,6 +9,10 @@ __pycache__/
 # Environment
 .env
 
+# Google credentials (NEVER commit these!)
+google_credentials.json
+google_token.pickle
+
 # Data files (keep locally, don't push to repo)
 agent_memory.json
 chroma_db/

@@ -36,31 +36,44 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             height: 100%;
             width: 100%;
             max-width: 400px;
-            padding: 40px 20px;
-            padding-bottom: 60px;
-            /* Space for transcript toggle */
+            padding: 20px 20px 60px 20px;
             position: relative;
             z-index: 10;
         }
 
+        /* Subtle glow behind avatar */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
         .title {
-            font-size: 2.5rem;
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 2rem;
             font-weight: 300;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.15em;
             color: #a855f7;
-            margin-bottom: 8px;
-            text-transform: uppercase;
+            margin: 0;
         }
 
         .status {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #666;
-            margin-bottom: 60px;
-            height: 24px;
+            margin-bottom: 10px;
+            height: 20px;
             transition: all 0.3s ease;
         }
 
@@ -68,11 +81,62 @@
             color: #a855f7;
         }
 
+        /* Avatar section */
+        .avatar-container {
+            margin-bottom: 15px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid rgba(168, 85, 247, 0.5);
+            object-fit: cover;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #a855f7;
+            transition: all 0.3s ease;
+        }
+
+        .avatar:hover {
+            border-color: #a855f7;
+            transform: scale(1.05);
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .avatar-hint {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: #444;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .avatar-container:hover .avatar-hint {
+            opacity: 1;
+        }
+
         .button-container {
             position: relative;
-            width: 180px;
-            height: 180px;
-            margin-bottom: 60px;
+            width: 100px;
+            height: 100px;
+            margin-top: 10px;
+            margin-bottom: 20px;
         }
 
         .pulse-ring {
@@ -226,24 +290,20 @@
         /* Chat transcript panel */
         .transcript-container {
             position: fixed;
+            top: 360px;
             bottom: 60px;
-            /* Above text input */
             left: 0;
             right: 0;
-            max-height: calc(35vh - 60px);
             z-index: 10;
-            background: rgba(10, 10, 15, 0.98);
+            background: rgba(10, 10, 15, 0.95);
             border-top: 1px solid rgba(168, 85, 247, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            transform: translateY(100%);
-            transition: transform 0.3s ease, bottom 0.3s ease;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
         .transcript-container.visible {
-            transform: translateY(0);
+            /* Always visible now - no transform needed */
         }
 
         /* When text input is visible, move transcript up */
@@ -285,6 +345,7 @@
             padding: 16px;
             display: flex;
             flex-direction: column;
+            justify-content: flex-end;
             gap: 12px;
         }
 
@@ -470,7 +531,15 @@
 
     <div class="container" id="app">
         <h1 class="title">Ara</h1>
-        <div class="status" id="status">Tap to connect</div>
+
+        <!-- Customizable Avatar -->
+        <div class="avatar-container" id="avatarContainer">
+            <div class="avatar" id="avatar">A</div>
+            <span class="avatar-hint">Tap to change photo</span>
+            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+        </div>
+
+        <div class="status" id="status"></div>
 
         <div class="button-container" id="buttonContainer">
             <div class="pulse-ring"></div>
@@ -547,6 +616,46 @@
         const connectionDot = document.getElementById('connectionDot');
         const transcriptContainer = document.getElementById('transcriptContainer');
         const transcript = document.getElementById('transcript');
+        const avatar = document.getElementById('avatar');
+        const avatarContainer = document.getElementById('avatarContainer');
+        const avatarInput = document.getElementById('avatarInput');
+
+        // Load saved avatar from localStorage
+        const savedAvatar = localStorage.getItem('araAvatar');
+        if (savedAvatar) {
+            avatar.innerHTML = `<img src="${savedAvatar}" alt="Ara">`;
+        }
+
+        // Avatar click to change photo
+        avatarContainer.addEventListener('click', () => {
+            avatarInput.click();
+        });
+
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Compress and save avatar
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const size = 200; // Save as 200x200 for good quality in 100px display
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // Crop to square (center)
+                const minDim = Math.min(img.width, img.height);
+                const sx = (img.width - minDim) / 2;
+                const sy = (img.height - minDim) / 2;
+                ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                localStorage.setItem('araAvatar', dataUrl);
+                avatar.innerHTML = `<img src="${dataUrl}" alt="Ara">`;
+            };
+            img.src = URL.createObjectURL(file);
+        });
 
         // Audio Worklet for recording
         const workletCode = `
@@ -687,6 +796,75 @@
                     updateStatus('Ready', false);
                     startIdleTimer();
                     checkPendingMessage();
+                    break;
+
+                // Knowledge base handlers
+                case 'kb.stored':
+                    addTranscript('ara', `✓ Saved "${data.name}" to knowledge base (${data.chunks} chunks)`);
+                    break;
+
+                case 'kb.deleted':
+                    addTranscript('ara', `✓ Deleted "${data.name}" from knowledge base`);
+                    break;
+
+                case 'kb.documents':
+                    if (data.documents && data.documents.length > 0) {
+                        const docList = data.documents.map(d => `• ${d.name} (${d.type})`).join('\n');
+                        addTranscript('ara', `📚 Knowledge Base:\n${docList}`);
+                    } else {
+                        addTranscript('ara', '📚 Knowledge Base is empty');
+                    }
+                    break;
+
+                case 'kb.error':
+                    addTranscript('ara', `⚠️ Knowledge base error: ${data.error}`);
+                    break;
+
+                // ============ GOOGLE SERVICE RESPONSES ============
+
+                case 'google.emails.result':
+                    if (data.emails && data.emails.length > 0) {
+                        let emailList = '📧 **Recent Emails:**\n\n';
+                        data.emails.forEach((e, i) => {
+                            emailList += `${i + 1}. **${e.subject || 'No subject'}**\n   From: ${e.from}\n   ${e.snippet?.substring(0, 100)}...\n\n`;
+                        });
+                        addTranscript('ara', emailList);
+                    } else {
+                        addTranscript('ara', '📧 No emails found');
+                    }
+                    break;
+
+                case 'google.files.result':
+                    if (data.files && data.files.length > 0) {
+                        let fileList = '📁 **Google Drive Files:**\n\n';
+                        data.files.forEach((f, i) => {
+                            fileList += `${i + 1}. ${f.name}\n`;
+                        });
+                        addTranscript('ara', fileList);
+                    } else {
+                        addTranscript('ara', '📁 No files found');
+                    }
+                    break;
+
+                case 'google.file.content.result':
+                    addTranscript('ara', `📄 **File Content:**\n\n${data.content?.substring(0, 2000)}${data.content?.length > 2000 ? '...(truncated)' : ''}`);
+                    break;
+
+                case 'google.calendar.result':
+                    if (data.events && data.events.length > 0) {
+                        let eventList = '📅 **Upcoming Events:**\n\n';
+                        data.events.forEach((e, i) => {
+                            const start = e.start ? new Date(e.start).toLocaleString() : 'TBD';
+                            eventList += `${i + 1}. **${e.summary}**\n   ${start}\n   ${e.location || ''}\n\n`;
+                        });
+                        addTranscript('ara', eventList);
+                    } else {
+                        addTranscript('ara', '📅 No upcoming events');
+                    }
+                    break;
+
+                case 'google.error':
+                    addTranscript('ara', `⚠️ Google error: ${data.error}`);
                     break;
             }
         }
@@ -1014,19 +1192,23 @@
                         }
 
                         console.log(`[PDF] Extracted ${fullText.length} chars from ${pdf.numPages} pages`);
-                        const preview = fullText.substring(0, 500) + (fullText.length > 500 ? '...' : '');
-                        addTranscript('user', `[PDF extracted: ${pdf.numPages} pages]\n${preview}`);
+                        const preview = fullText.substring(0, 300) + '...';
 
-                        if (socket && socket.readyState === WebSocket.OPEN) {
+                        // Ask what to do with the PDF
+                        const saveToKB = confirm(`Save "${file.name}" to knowledge base?\n\nClick OK to save for future reference.\nClick Cancel to just discuss it with Ara.`);
+
+                        if (saveToKB && socket && socket.readyState === WebSocket.OPEN) {
+                            // Save to knowledge base silently (no reading aloud)
                             socket.send(JSON.stringify({
-                                type: 'conversation.item.create',
-                                item: {
-                                    type: 'message',
-                                    role: 'user',
-                                    content: [{ type: 'input_text', text: `Here is the content of a PDF called "${file.name}" (${pdf.numPages} pages):\n\n${fullText}\n\nPlease analyze this document.` }]
-                                }
+                                type: 'kb.store',
+                                name: file.name,
+                                content: fullText,
+                                doc_type: 'pdf'
                             }));
-                            socket.send(JSON.stringify({ type: 'response.create' }));
+                            addTranscript('user', `[Saved to knowledge base: ${file.name}]`);
+                        } else {
+                            // Just show in transcript - don't send to Ara (she would recite it)
+                            addTranscript('user', `[PDF uploaded: ${file.name} - ${pdf.numPages} pages]\n${preview}\n\n(Not saved to knowledge base. Ask Ara about it verbally.)`);
                         }
                     } catch (pdfErr) {
                         console.error('PDF extraction error:', pdfErr);
@@ -1035,19 +1217,23 @@
                 } else {
                     // Read text file
                     const text = await file.text();
-                    const preview = text.substring(0, 500) + (text.length > 500 ? '...' : '');
-                    addTranscript('user', `[Uploaded file: ${file.name}]\n${preview}`);
+                    const preview = text.substring(0, 300) + '...';
 
-                    if (socket && socket.readyState === WebSocket.OPEN) {
+                    // Ask what to do with the file
+                    const saveToKB = confirm(`Save "${file.name}" to knowledge base?\n\nClick OK to save for future reference.\nClick Cancel to just discuss it with Ara.`);
+
+                    if (saveToKB && socket && socket.readyState === WebSocket.OPEN) {
+                        // Save to knowledge base silently
                         socket.send(JSON.stringify({
-                            type: 'conversation.item.create',
-                            item: {
-                                type: 'message',
-                                role: 'user',
-                                content: [{ type: 'input_text', text: `Here is the content of a file called "${file.name}":\n\n${text}\n\nPlease analyze this document.` }]
-                            }
+                            type: 'kb.store',
+                            name: file.name,
+                            content: text,
+                            doc_type: 'text'
                         }));
-                        socket.send(JSON.stringify({ type: 'response.create' }));
+                        addTranscript('user', `[Saved to knowledge base: ${file.name}]`);
+                    } else {
+                        // Just show in transcript - don't send to Ara (she would recite it)
+                        addTranscript('user', `[File uploaded: ${file.name}]\n${preview}\n\n(Not saved to knowledge base. Ask Ara about it verbally.)`);
                     }
                 }
                 resetIdleTimer();
@@ -1129,8 +1315,8 @@
         // Prevent context menu on long press
         talkButton.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // Initial state
-        updateStatus('Tap to connect', false);
+        // Initial state - status starts empty
+        updateStatus('', false);
     </script>
 </body>
 
