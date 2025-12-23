@@ -22,7 +22,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(180deg, #0a0a0f 0%, #0d0d15 50%, #1a1025 100%);
+            background: linear-gradient(180deg, #05050a 0%, #0a0a12 40%, #0f0a18 70%, #1a0f25 100%);
             color: #fff;
             height: 100vh;
             display: flex;
@@ -33,7 +33,7 @@
             position: relative;
         }
 
-        /* Star particles background */
+        /* Star particles background - more visible */
         body::before {
             content: '';
             position: absolute;
@@ -42,37 +42,58 @@
             right: 0;
             bottom: 0;
             background-image:
-                radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.3), transparent),
-                radial-gradient(2px 2px at 40px 70px, rgba(168, 85, 247, 0.2), transparent),
-                radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.2), transparent),
-                radial-gradient(2px 2px at 130px 80px, rgba(168, 85, 247, 0.15), transparent),
-                radial-gradient(1px 1px at 160px 120px, rgba(255, 255, 255, 0.25), transparent),
-                radial-gradient(2px 2px at 200px 50px, rgba(168, 85, 247, 0.2), transparent),
-                radial-gradient(1px 1px at 250px 90px, rgba(255, 255, 255, 0.15), transparent),
-                radial-gradient(2px 2px at 300px 150px, rgba(168, 85, 247, 0.2), transparent),
-                radial-gradient(1px 1px at 350px 30px, rgba(255, 255, 255, 0.2), transparent),
-                radial-gradient(2px 2px at 380px 100px, rgba(168, 85, 247, 0.15), transparent);
-            background-size: 400px 200px;
-            animation: twinkle 8s ease-in-out infinite;
+                /* Layer 1 - bright white stars */
+                radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
+                radial-gradient(2px 2px at 60px 100px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 100px 50px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(2px 2px at 150px 150px, rgba(255, 255, 255, 0.7), transparent),
+                radial-gradient(1px 1px at 200px 80px, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(2px 2px at 250px 120px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 300px 50px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(2px 2px at 350px 180px, rgba(255, 255, 255, 0.7), transparent),
+                radial-gradient(1px 1px at 380px 90px, rgba(255, 255, 255, 0.4), transparent),
+                /* Layer 2 - purple accent stars */
+                radial-gradient(2px 2px at 40px 160px, rgba(168, 85, 247, 0.6), transparent),
+                radial-gradient(3px 3px at 120px 200px, rgba(168, 85, 247, 0.5), transparent),
+                radial-gradient(2px 2px at 180px 40px, rgba(138, 43, 226, 0.4), transparent),
+                radial-gradient(2px 2px at 280px 90px, rgba(168, 85, 247, 0.5), transparent),
+                radial-gradient(3px 3px at 320px 150px, rgba(138, 43, 226, 0.4), transparent),
+                /* Layer 3 - scattered small dots */
+                radial-gradient(1px 1px at 70px 70px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 130px 130px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 230px 170px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 290px 30px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 360px 110px, rgba(255, 255, 255, 0.3), transparent);
+            background-size: 400px 220px;
+            animation: float-up 20s linear infinite;
             pointer-events: none;
             z-index: 1;
         }
 
-        /* Aurora glow from bottom */
+        /* Aurora glow from bottom - much stronger */
         body::after {
             content: '';
             position: absolute;
             bottom: 0;
-            left: 0;
-            right: 0;
-            height: 60%;
-            background: linear-gradient(0deg,
-                    rgba(168, 85, 247, 0.15) 0%,
-                    rgba(138, 43, 226, 0.08) 30%,
-                    rgba(75, 0, 130, 0.03) 60%,
-                    transparent 100%);
+            left: -20%;
+            right: -20%;
+            height: 70%;
+            background:
+                radial-gradient(ellipse 100% 60% at 50% 100%, rgba(168, 85, 247, 0.25) 0%, transparent 60%),
+                radial-gradient(ellipse 80% 40% at 50% 100%, rgba(138, 43, 226, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 30% at 50% 100%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
             pointer-events: none;
             z-index: 1;
+        }
+
+        @keyframes float-up {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 0 -220px;
+            }
         }
 
         @keyframes twinkle {
@@ -83,7 +104,7 @@
             }
 
             50% {
-                opacity: 0.7;
+                opacity: 0.6;
             }
         }
 
@@ -198,6 +219,38 @@
             margin-bottom: 30px;
         }
 
+        /* Outer glow ring - always visible */
+        .button-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            box-shadow:
+                0 0 15px rgba(168, 85, 247, 0.15),
+                inset 0 0 15px rgba(168, 85, 247, 0.1);
+            pointer-events: none;
+        }
+
+        /* Second outer ring */
+        .button-container::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 1px solid rgba(168, 85, 247, 0.15);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.08);
+            pointer-events: none;
+        }
+
         .pulse-ring {
             position: absolute;
             top: 50%;
@@ -206,8 +259,8 @@
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            border: 2px solid rgba(168, 85, 247, 0.3);
-            opacity: 0;
+            border: 2px solid rgba(168, 85, 247, 0.4);
+            opacity: 0.5;
             transition: all 0.3s ease;
         }
 
@@ -462,6 +515,17 @@
             border-radius: 1px;
         }
 
+        .end-button.disabled {
+            background: rgba(100, 100, 100, 0.1);
+            border-color: rgba(100, 100, 100, 0.3);
+            color: #555;
+            cursor: default;
+        }
+
+        .end-button.disabled .stop-icon {
+            background: #555;
+        }
+
         .header-buttons {
             display: flex;
             align-items: center;
@@ -712,7 +776,7 @@
         <div class="transcript-header">
             <span class="transcript-title">Conversation</span>
             <div class="header-buttons">
-                <button class="end-button" id="endButton"><span class="stop-icon"></span>End</button>
+                <button class="end-button disabled" id="endButton"><span class="stop-icon"></span>End</button>
                 <button class="transcript-toggle" id="transcriptToggle">Hide</button>
             </div>
         </div>
@@ -925,6 +989,7 @@
                     // Session is ready - persona has been loaded
                     console.log('[Session] Ready - persona loaded');
                     isConnected = true;
+                    document.getElementById('endButton').classList.remove('disabled');
                     updateStatus('Ready', false);
                     startIdleTimer();
                     checkPendingMessage();
@@ -1177,6 +1242,7 @@
             cleanup();
             isConnected = false;
             connectionDot.classList.remove('connected');
+            document.getElementById('endButton').classList.add('disabled');
             updateStatus('Tap to connect', false);
         }
 
