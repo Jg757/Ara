@@ -24,16 +24,29 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/contacts.readonly',  # Google Contacts (People API)
 ]
 
 # Check Cloud Run secret mount paths first, then fall back to local files
 def _get_credentials_path():
     cloud_path = '/secrets/credentials/google-credentials'
-    return cloud_path if os.path.exists(cloud_path) else 'google_credentials.json'
+    local_path = 'google_credentials.json'
+    if os.path.exists(cloud_path):
+        print(f"[GoogleServices] Using cloud credentials: {cloud_path}")
+        return cloud_path
+    else:
+        print(f"[GoogleServices] Cloud path not found ({cloud_path}), using local: {local_path}")
+        return local_path
 
 def _get_token_path():
     cloud_path = '/secrets/token/google-token'
-    return cloud_path if os.path.exists(cloud_path) else 'google_token.pickle'
+    local_path = 'google_token.pickle'
+    if os.path.exists(cloud_path):
+        print(f"[GoogleServices] Using cloud token: {cloud_path}")
+        return cloud_path
+    else:
+        print(f"[GoogleServices] Cloud path not found ({cloud_path}), using local: {local_path}")
+        return local_path
 
 CREDENTIALS_FILE = _get_credentials_path()
 TOKEN_FILE = _get_token_path()
@@ -48,6 +61,7 @@ class GoogleServices:
     _drive = None
     _sheets = None
     _calendar = None
+    _contacts = None
     
     @classmethod
     def get_instance(cls):
@@ -62,26 +76,49 @@ class GoogleServices:
     def _authenticate(self):
         """Authenticate with Google using OAuth2."""
         creds = None
+        is_cloud_run = os.environ.get('K_SERVICE') is not None  # Cloud Run sets this
+        
+        print(f"[GoogleServices] Authenticating... (Cloud Run: {is_cloud_run})")
+        print(f"[GoogleServices] Credentials file: {CREDENTIALS_FILE} (exists: {os.path.exists(CREDENTIALS_FILE)})")
+        print(f"[GoogleServices] Token file: {TOKEN_FILE} (exists: {os.path.exists(TOKEN_FILE)})")
         
         # Load existing token if available
         if os.path.exists(TOKEN_FILE):
-            with open(TOKEN_FILE, 'rb') as token:
-                creds = pickle.load(token)
+            try:
+                with open(TOKEN_FILE, 'rb') as token:
+                    creds = pickle.load(token)
+                print(f"[GoogleServices] Loaded token, valid: {creds.valid if creds else 'None'}")
+            except Exception as e:
+                print(f"[GoogleServices] Error loading token: {e}")
         
-        # If no valid credentials, authenticate
+        # If no valid credentials, try to refresh or authenticate
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+                print("[GoogleServices] Token expired, refreshing...")
+                try:
+                    creds.refresh(Request())
+                    print("[GoogleServices] Token refreshed successfully")
+                except Exception as e:
+                    print(f"[GoogleServices] Token refresh failed: {e}")
+                    raise
             else:
+                # Can't run local OAuth in Cloud Run
+                if is_cloud_run:
+                    raise RuntimeError("No valid token available in Cloud Run. Please ensure google_token.pickle is properly deployed.")
+                
                 if not os.path.exists(CREDENTIALS_FILE):
                     raise FileNotFoundError(f"Missing {CREDENTIALS_FILE}. Please set up Google OAuth credentials.")
                 
                 flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-                creds = flow.run_local_server(port=8082)  # Use different port to avoid conflict
+                creds = flow.run_local_server(port=8082)
             
-            # Save the credentials for future use
-            with open(TOKEN_FILE, 'wb') as token:
-                pickle.dump(creds, token)
+            # Only save token locally (not in Cloud Run where filesystem is read-only)
+            if not is_cloud_run:
+                try:
+                    with open(TOKEN_FILE, 'wb') as token:
+                        pickle.dump(creds, token)
+                except Exception as e:
+                    print(f"[GoogleServices] Warning: Could not save token: {e}")
         
         self._creds = creds
         print("[GoogleServices] Authenticated successfully")
@@ -113,6 +150,108 @@ class GoogleServices:
         if self._calendar is None:
             self._calendar = build('calendar', 'v3', credentials=self._creds)
         return self._calendar
+    
+    @property
+    def contacts(self):
+        """Get Google People API (Contacts) service."""
+        if self._contacts is None:
+            self._contacts = build('people', 'v1', credentials=self._creds)
+        return self._contacts
+    
+    # ============ CONTACTS METHODS ============
+    
+    def get_contacts(self, max_results: int = 50, query: str = None) -> List[Dict]:
+        """Get contacts from Google Contacts.
+        
+        Args:
+            max_results: Maximum number of contacts to return
+            query: Optional search query to filter contacts by name
+        
+        Returns:
+            List of contact dictionaries with name, email, phone info
+        """
+        try:
+            # Use People API to list connections (contacts)
+            results = self.contacts.people().connections().list(
+                resourceName='people/me',
+                pageSize=max_results,
+                personFields='names,emailAddresses,phoneNumbers,organizations'
+            ).execute()
+            
+            connections = results.get('connections', [])
+            contacts = []
+            
+            for person in connections:
+                names = person.get('names', [])
+                emails = person.get('emailAddresses', [])
+                phones = person.get('phoneNumbers', [])
+                orgs = person.get('organizations', [])
+                
+                contact = {
+                    'name': names[0].get('displayName', '') if names else '',
+                    'email': emails[0].get('value', '') if emails else '',
+                    'phone': phones[0].get('value', '') if phones else '',
+                    'organization': orgs[0].get('name', '') if orgs else '',
+                    'resource_name': person.get('resourceName', '')
+                }
+                
+                # If there's a query, filter by name
+                if query:
+                    if query.lower() in contact['name'].lower():
+                        contacts.append(contact)
+                else:
+                    contacts.append(contact)
+            
+            print(f"[GoogleServices] Retrieved {len(contacts)} contacts")
+            return contacts
+            
+        except Exception as e:
+            print(f"[GoogleServices] Error getting contacts: {e}")
+            raise
+    
+    def search_contacts(self, query: str, max_results: int = 10) -> List[Dict]:
+        """Search contacts by name or email.
+        
+        Args:
+            query: Search query (name, email, etc.)
+            max_results: Maximum number of results
+        
+        Returns:
+            List of matching contacts
+        """
+        try:
+            # Use searchContacts API for better search
+            results = self.contacts.people().searchContacts(
+                query=query,
+                pageSize=max_results,
+                readMask='names,emailAddresses,phoneNumbers,organizations'
+            ).execute()
+            
+            people = results.get('results', [])
+            contacts = []
+            
+            for result in people:
+                person = result.get('person', {})
+                names = person.get('names', [])
+                emails = person.get('emailAddresses', [])
+                phones = person.get('phoneNumbers', [])
+                orgs = person.get('organizations', [])
+                
+                contacts.append({
+                    'name': names[0].get('displayName', '') if names else '',
+                    'email': emails[0].get('value', '') if emails else '',
+                    'phone': phones[0].get('value', '') if phones else '',
+                    'organization': orgs[0].get('name', '') if orgs else '',
+                    'resource_name': person.get('resourceName', '')
+                })
+            
+            print(f"[GoogleServices] Found {len(contacts)} contacts matching '{query}'")
+            return contacts
+            
+        except Exception as e:
+            print(f"[GoogleServices] Error searching contacts: {e}")
+            # Fall back to get_contacts with filter
+            return self.get_contacts(max_results=100, query=query)[:max_results]
     
     # ============ GMAIL METHODS ============
     

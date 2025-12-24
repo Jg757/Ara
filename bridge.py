@@ -210,6 +210,21 @@ async def proxy_handler(client_ws):
                                     "required": ["data"]
                                 }
                             }
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "retrieve_contacts",
+                                "description": "Retrieve contacts from Will's Google Contacts. Use this when Will asks about his contacts, phone numbers, or wants to find someone's contact information.",
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {
+                                        "query": {"type": "string", "description": "Optional search query to find a specific contact by name."},
+                                        "max_results": {"type": "integer", "description": "Maximum number of contacts to return.", "default": 10}
+                                    },
+                                    "required": []
+                                }
+                            }
                         }
                     ]
                 }
@@ -745,6 +760,38 @@ async def proxy_handler(client_ws):
                                 except Exception as e:
                                     output_data = {"error": str(e)}
                                     print(f"[Function Call] Sheet write error: {e}")
+                            
+                            elif func_name == 'retrieve_contacts':
+                                try:
+                                    from google_services import get_google_services
+                                    gs = get_google_services()
+                                    max_results = arguments.get('max_results', 10)
+                                    query = arguments.get('query', None)
+                                    
+                                    if query:
+                                        contacts = gs.search_contacts(query, max_results)
+                                    else:
+                                        contacts = gs.get_contacts(max_results)
+                                    
+                                    contact_list = []
+                                    for c in contacts:
+                                        contact_list.append({
+                                            "name": c.get('name', 'Unknown'),
+                                            "email": c.get('email', ''),
+                                            "phone": c.get('phone', ''),
+                                            "organization": c.get('organization', '')
+                                        })
+                                    output_data = {"contacts": contact_list, "count": len(contact_list)}
+                                    
+                                    # Also send to client for display
+                                    await client_ws.send(json.dumps({
+                                        "type": "google.contacts.result",
+                                        "contacts": contacts
+                                    }))
+                                    print(f"[Function Call] Retrieved {len(contacts)} contacts")
+                                except Exception as e:
+                                    output_data = {"error": str(e)}
+                                    print(f"[Function Call] Contacts error: {e}")
                             
                             # Send function output back to xAI
                             if output_data and call_id:
