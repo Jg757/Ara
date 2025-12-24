@@ -788,8 +788,10 @@ async def proxy_handler(client_ws):
     print("Disconnecting.")
 
 async def main():
-    print("Starting Bridge on ws://localhost:8765")
-    async with websockets.serve(proxy_handler, "localhost", 8765):
+    port = int(os.getenv("PORT", 8765))
+    host = "0.0.0.0"
+    print(f"Starting Bridge on ws://{host}:{port}")
+    async with websockets.serve(proxy_handler, host, port):
         await asyncio.get_running_loop().create_future()  # Run forever
 
 if __name__ == "__main__":

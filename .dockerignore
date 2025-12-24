@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+*.zip
+chroma_db/
+agent_memory.json
+google_token.pickle
+google_credentials.json
+*.md
+ara.html

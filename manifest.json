@@ -1,0 +1,18 @@
+{
+    "name": "Ara Voice",
+    "short_name": "Ara",
+    "description": "AI Voice Assistant",
+    "start_url": "/ara.html",
+    "display": "standalone",
+    "background_color": "#0a0a0f",
+    "theme_color": "#a855f7",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23a855f7'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>A</text></svg>",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

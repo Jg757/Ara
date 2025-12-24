@@ -12,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link rel="apple-touch-icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a0f' width='100' height='100'/><text y='65' x='50' text-anchor='middle' font-size='50' fill='%23a855f7'>A</text></svg>">
+    <link rel="manifest" href="manifest.json">
     <style>
         * {
             margin: 0;
@@ -876,7 +877,11 @@
             updateStatus('Connecting...', false);
 
             try {
-                socket = new WebSocket('ws://localhost:8765');
+                // Use Cloud Run in production, localhost for development
+                const wsUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'ws://localhost:8765'
+                    : 'wss://ara-bridge-323516405288.us-central1.run.app';
+                socket = new WebSocket(wsUrl);
 
                 socket.onopen = async () => {
                     // Connected to bridge, but waiting for xAI session
@@ -1532,6 +1537,11 @@
 
         // Initial state - status starts empty
         updateStatus('', false);
+
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
+        }
     </script>
 </body>
 
