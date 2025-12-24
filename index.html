@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>Ara</title>
+    <!-- PDF.js for PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a0f' width='100' height='100'/><text y='65' x='50' text-anchor='middle' font-size='50' fill='%23a855f7'>A</text></svg>">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #05050a 0%, #0a0a12 40%, #0f0a18 70%, #1a0f25 100%);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Star particles background - more visible */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                /* Layer 1 - bright white stars */
+                radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
+                radial-gradient(2px 2px at 60px 100px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 100px 50px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(2px 2px at 150px 150px, rgba(255, 255, 255, 0.7), transparent),
+                radial-gradient(1px 1px at 200px 80px, rgba(255, 255, 255, 0.4), transparent),
+                radial-gradient(2px 2px at 250px 120px, rgba(255, 255, 255, 0.6), transparent),
+                radial-gradient(1px 1px at 300px 50px, rgba(255, 255, 255, 0.5), transparent),
+                radial-gradient(2px 2px at 350px 180px, rgba(255, 255, 255, 0.7), transparent),
+                radial-gradient(1px 1px at 380px 90px, rgba(255, 255, 255, 0.4), transparent),
+                /* Layer 2 - purple accent stars */
+                radial-gradient(2px 2px at 40px 160px, rgba(168, 85, 247, 0.6), transparent),
+                radial-gradient(3px 3px at 120px 200px, rgba(168, 85, 247, 0.5), transparent),
+                radial-gradient(2px 2px at 180px 40px, rgba(138, 43, 226, 0.4), transparent),
+                radial-gradient(2px 2px at 280px 90px, rgba(168, 85, 247, 0.5), transparent),
+                radial-gradient(3px 3px at 320px 150px, rgba(138, 43, 226, 0.4), transparent),
+                /* Layer 3 - scattered small dots */
+                radial-gradient(1px 1px at 70px 70px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 130px 130px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 230px 170px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 290px 30px, rgba(255, 255, 255, 0.3), transparent),
+                radial-gradient(1px 1px at 360px 110px, rgba(255, 255, 255, 0.3), transparent);
+            background-size: 400px 220px;
+            animation: float-up 20s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Aurora glow from bottom - much stronger */
+        body::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -20%;
+            right: -20%;
+            height: 70%;
+            background:
+                radial-gradient(ellipse 100% 60% at 50% 100%, rgba(168, 85, 247, 0.25) 0%, transparent 60%),
+                radial-gradient(ellipse 80% 40% at 50% 100%, rgba(138, 43, 226, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 30% at 50% 100%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes float-up {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 0 -220px;
+            }
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100%;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px 20px 60px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Subtle glow behind avatar */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .title {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            color: #a855f7;
+            margin: 0;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 10px;
+            height: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .status.active {
+            color: #a855f7;
+        }
+
+        /* Avatar section - positioned top right */
+        .avatar-container {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            cursor: pointer;
+            z-index: 20;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(168, 85, 247, 0.5);
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #fff;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+        }
+
+        .avatar:hover {
+            border-color: #a855f7;
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .avatar-hint {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: #444;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .avatar-container:hover .avatar-hint {
+            opacity: 1;
+        }
+
+        .button-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin-top: 40px;
+            margin-bottom: 30px;
+        }
+
+        /* Outer glow ring - always visible */
+        .button-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            box-shadow:
+                0 0 15px rgba(168, 85, 247, 0.15),
+                inset 0 0 15px rgba(168, 85, 247, 0.1);
+            pointer-events: none;
+        }
+
+        /* Second outer ring */
+        .button-container::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 1px solid rgba(168, 85, 247, 0.15);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.08);
+            pointer-events: none;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid rgba(168, 85, 247, 0.4);
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .recording .pulse-ring {
+            animation: pulse 1.5s ease-out infinite;
+        }
+
+        .speaking .pulse-ring {
+            animation: breathe 2s ease-in-out infinite;
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.15);
+                opacity: 0.5;
+            }
+        }
+
+        .talk-button {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid rgba(168, 85, 247, 0.5);
+            background: linear-gradient(145deg, #1a1a24, #0f0f16);
+            box-shadow:
+                0 0 20px rgba(168, 85, 247, 0.2),
+                0 0 40px rgba(168, 85, 247, 0.1),
+                inset 0 0 30px rgba(168, 85, 247, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .talk-button::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #7c3aed, #a855f7);
+            opacity: 0.3;
+            z-index: -1;
+            animation: glow-rotate 4s linear infinite;
+        }
+
+        @keyframes glow-rotate {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .talk-button:active,
+        .talk-button.active {
+            transform: scale(0.95);
+            box-shadow:
+                0 0 30px rgba(168, 85, 247, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .recording .talk-button {
+            border-color: #a855f7;
+            background: linear-gradient(145deg, #2a1a34, #1a0f24);
+            box-shadow:
+                0 0 40px rgba(168, 85, 247, 0.5),
+                0 0 80px rgba(168, 85, 247, 0.3),
+                inset 0 0 30px rgba(168, 85, 247, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .recording .talk-button::before {
+            opacity: 0.6;
+        }
+
+        .speaking .talk-button {
+            background: linear-gradient(145deg, #1a1a24, #0f0f16);
+            box-shadow:
+                0 0 30px rgba(168, 85, 247, 0.3),
+                0 0 60px rgba(168, 85, 247, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .button-icon {
+            width: 50px;
+            height: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .mic-icon {
+            fill: none;
+            stroke: #a855f7;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.3));
+        }
+
+        .recording .mic-icon {
+            stroke: #a855f7;
+            filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
+        }
+
+        .speaking .mic-icon {
+            stroke: #a855f7;
+            opacity: 0.6;
+        }
+
+        .wave-icon {
+            display: none;
+        }
+
+        .speaking .mic-icon {
+            display: none;
+        }
+
+        .speaking .wave-icon {
+            display: block;
+            stroke: #a855f7;
+            animation: wave-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes wave-pulse {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .hint {
+            font-size: 0.8rem;
+            color: #444;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .recording .hint,
+        .speaking .hint,
+        .processing .hint {
+            opacity: 0;
+        }
+
+        /* Chat transcript panel */
+        .transcript-container {
+            position: fixed;
+            top: 360px;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            background: rgba(10, 10, 15, 0.95);
+            border-top: 1px solid rgba(168, 85, 247, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .transcript-container.visible {
+            /* Always visible now - no transform needed */
+        }
+
+        /* When text input is visible, move transcript up */
+        .text-input-visible .transcript-container {
+            bottom: 60px;
+        }
+
+        .transcript-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .transcript-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #666;
+        }
+
+        .transcript-toggle {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .transcript-toggle:hover {
+            color: #a855f7;
+        }
+
+        .end-button {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .end-button:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: #ef4444;
+        }
+
+        .end-button .stop-icon {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 1px;
+        }
+
+        .end-button.disabled {
+            background: rgba(100, 100, 100, 0.1);
+            border-color: rgba(100, 100, 100, 0.3);
+            color: #555;
+            cursor: default;
+        }
+
+        .end-button.disabled .stop-icon {
+            background: #555;
+        }
+
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transcript {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            animation: messageIn 0.3s ease;
+        }
+
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: rgba(255, 255, 255, 0.08);
+            color: #bbb;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ara {
+            align-self: flex-start;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.08));
+            color: #d8b4fe;
+            border-bottom-left-radius: 4px;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+
+        .message-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            opacity: 0.5;
+        }
+
+        /* Text input area */
+        .text-input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            background: rgba(10, 10, 15, 1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+        }
+
+        .text-input-container.visible {
+            transform: translateY(0);
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .text-input:focus {
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
+        .text-input::placeholder {
+            color: #555;
+        }
+
+        .send-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .send-button:hover {
+            transform: scale(1.02);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .upload-button {
+            padding: 10px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-button:hover {
+            background: rgba(168, 85, 247, 0.4);
+            transform: scale(1.05);
+        }
+
+        .toggle-text-btn {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-text-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #a855f7;
+        }
+
+        /* Make transcript messages selectable */
+        .message {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        /* Connection indicator */
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .connection-dot.connected {
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+
+        .connection-dot.error {
+            background: #ef4444;
+        }
+
+        /* Disabled state */
+        .disabled .talk-button {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="connection-dot" id="connectionDot"></div>
+
+    <div class="container" id="app">
+        <h1 class="title">Ara</h1>
+
+        <!-- Customizable Avatar -->
+        <div class="avatar-container" id="avatarContainer">
+            <div class="avatar" id="avatar">A</div>
+            <span class="avatar-hint">Tap to change photo</span>
+            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="button-container" id="buttonContainer">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring" style="animation-delay: 0.5s"></div>
+            <button class="talk-button" id="talkButton">
+                <svg class="button-icon mic-icon" viewBox="0 0 24 24">
+                    <path d="M12 1a4 4 0 0 0-4 4v7a4 4 0 0 0 8 0V5a4 4 0 0 0-4-4z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+                <svg class="button-icon wave-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M2 12h2" />
+                    <path d="M6 8v8" />
+                    <path d="M10 5v14" />
+                    <path d="M14 8v8" />
+                    <path d="M18 10v4" />
+                    <path d="M22 12h-2" />
+                </svg>
+            </button>
+        </div>
+
+        <p class="hint">Hold to talk</p>
+    </div>
+
+    <!-- Text input area (always visible) -->
+    <div class="text-input-container" id="textInputContainer">
+        <input type="file" id="fileInput" style="display: none;" accept="image/*,.txt,.pdf,.json,.md">
+        <button class="upload-button" id="uploadButton" title="Upload file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path
+                    d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+        </button>
+        <input type="text" class="text-input" id="textInput" placeholder="Ask Ara..." autocomplete="off">
+        <button class="send-button" id="sendButton">Send</button>
+    </div>
+
+    <div class="transcript-container" id="transcriptContainer">
+        <div class="transcript-header">
+            <span class="transcript-title">Conversation</span>
+            <div class="header-buttons">
+                <button class="end-button disabled" id="endButton"><span class="stop-icon"></span>End</button>
+                <button class="transcript-toggle" id="transcriptToggle">Hide</button>
+            </div>
+        </div>
+        <div class="transcript" id="transcript"></div>
+    </div>
+
+    <script>
+        // Configure PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // State
+        let socket = null;
+        let audioCtx = null;
+        let workletNode = null;
+        let mediaStream = null;
+        let isConnected = false;
+        let isRecording = false;
+        let isSpeaking = false;
+        let nextPlayTime = 0;
+
+        // Idle timeout (1 minute = 60000ms)
+        const IDLE_TIMEOUT_MS = 60000;
+        let idleTimer = null;
+        let idleCountdown = null;
+
+        // Elements
+        const app = document.getElementById('app');
+        const status = document.getElementById('status');
+        const talkButton = document.getElementById('talkButton');
+        const buttonContainer = document.getElementById('buttonContainer');
+        const connectionDot = document.getElementById('connectionDot');
+        const transcriptContainer = document.getElementById('transcriptContainer');
+        const transcript = document.getElementById('transcript');
+        const avatar = document.getElementById('avatar');
+        const avatarContainer = document.getElementById('avatarContainer');
+        const avatarInput = document.getElementById('avatarInput');
+
+        // Load saved avatar from localStorage
+        const savedAvatar = localStorage.getItem('araAvatar');
+        if (savedAvatar) {
+            avatar.innerHTML = `<img src="${savedAvatar}" alt="Ara">`;
+        }
+
+        // Avatar click to change photo
+        avatarContainer.addEventListener('click', () => {
+            avatarInput.click();
+        });
+
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Compress and save avatar
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const size = 200; // Save as 200x200 for good quality in 100px display
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // Crop to square (center)
+                const minDim = Math.min(img.width, img.height);
+                const sx = (img.width - minDim) / 2;
+                const sy = (img.height - minDim) / 2;
+                ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                localStorage.setItem('araAvatar', dataUrl);
+                avatar.innerHTML = `<img src="${dataUrl}" alt="Ara">`;
+            };
+            img.src = URL.createObjectURL(file);
+        });
+
+        // Audio Worklet for recording
+        const workletCode = `
+            class RecorderProcessor extends AudioWorkletProcessor {
+                process(inputs, outputs, parameters) {
+                    const input = inputs[0];
+                    if (input && input.length > 0) {
+                        this.port.postMessage(input[0]);
+                    }
+                    return true;
+                }
+            }
+            registerProcessor('recorder-processor', RecorderProcessor);
+        `;
+        const workletBlob = new Blob([workletCode], { type: 'application/javascript' });
+        const workletUrl = URL.createObjectURL(workletBlob);
+
+        // Connect to bridge
+        async function connect() {
+            if (isConnected) return;
+
+            updateStatus('Connecting...', false);
+
+            try {
+                // Use Cloud Run in production, localhost for development
+                const wsUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'ws://localhost:8765'
+                    : 'wss://ara-bridge-323516405288.us-central1.run.app';
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = async () => {
+                    // Connected to bridge, but waiting for xAI session
+                    connectionDot.classList.add('connected');
+                    updateStatus('Loading Ara...', true);
+                    await initAudio();
+                    // Note: isConnected stays false until session.updated received
+                };
+
+                socket.onmessage = handleMessage;
+
+                socket.onclose = () => {
+                    isConnected = false;
+                    connectionDot.classList.remove('connected');
+                    updateStatus('Disconnected', false);
+                    cleanup();
+                };
+
+                socket.onerror = () => {
+                    connectionDot.classList.add('error');
+                    updateStatus('Connection failed', false);
+                };
+
+            } catch (e) {
+                console.error('Connection error:', e);
+                updateStatus('Error: ' + e.message, false);
+            }
+        }
+
+        // Initialize audio
+        async function initAudio() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+                nextPlayTime = audioCtx.currentTime;
+
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 24000,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+
+                const source = audioCtx.createMediaStreamSource(mediaStream);
+                await audioCtx.audioWorklet.addModule(workletUrl);
+                workletNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
+
+                workletNode.port.onmessage = (event) => {
+                    if (isRecording && socket && socket.readyState === WebSocket.OPEN) {
+                        const int16 = float32ToInt16(event.data);
+                        const base64 = arrayBufferToBase64(int16.buffer);
+                        socket.send(JSON.stringify({
+                            type: 'input_audio_buffer.append',
+                            audio: base64
+                        }));
+                    }
+                };
+
+                source.connect(workletNode);
+
+            } catch (e) {
+                console.error('Audio init error:', e);
+                updateStatus('Microphone access denied', false);
+            }
+        }
+
+        // Handle messages from xAI via bridge
+        function handleMessage(event) {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+                case 'response.audio.delta':
+                case 'response.output_audio.delta':
+                    if (!isSpeaking) {
+                        isSpeaking = true;
+                        lastSpeakingStart = Date.now();
+                        setState('speaking');
+                        updateStatus('Ara is speaking...', true);
+                    }
+                    playAudio(data.delta);
+                    break;
+
+                case 'response.audio.done':
+                case 'response.output_audio.done':
+                case 'response.done':
+                    setTimeout(() => {
+                        if (isSpeaking) {
+                            isSpeaking = false;
+                            setState('idle');
+                            updateStatus('Ready', false);
+                            resetIdleTimer(); // Reset idle timer after Ara speaks
+                        }
+                    }, 500);
+                    break;
+
+                case 'conversation.item.input_audio_transcription.completed':
+                    if (data.transcript) {
+                        addTranscript('user', data.transcript);
+                    }
+                    break;
+
+                case 'response.output_audio_transcript.done':
+                    if (data.transcript) {
+                        addTranscript('ara', data.transcript);
+                    }
+                    break;
+
+                case 'session.updated':
+                    // Session is ready - persona has been loaded
+                    console.log('[Session] Ready - persona loaded');
+                    isConnected = true;
+                    document.getElementById('endButton').classList.remove('disabled');
+                    updateStatus('Ready', false);
+                    startIdleTimer();
+                    checkPendingMessage();
+                    break;
+
+                // Knowledge base handlers
+                case 'kb.stored':
+                    addTranscript('ara', `✓ Saved "${data.name}" to knowledge base (${data.chunks} chunks)`);
+                    break;
+
+                case 'kb.deleted':
+                    addTranscript('ara', `✓ Deleted "${data.name}" from knowledge base`);
+                    break;
+
+                case 'kb.documents':
+                    if (data.documents && data.documents.length > 0) {
+                        const docList = data.documents.map(d => `• ${d.name} (${d.type})`).join('\n');
+                        addTranscript('ara', `📚 Knowledge Base:\n${docList}`);
+                    } else {
+                        addTranscript('ara', '📚 Knowledge Base is empty');
+                    }
+                    break;
+
+                case 'kb.error':
+                    addTranscript('ara', `⚠️ Knowledge base error: ${data.error}`);
+                    break;
+
+                // ============ GOOGLE SERVICE RESPONSES ============
+
+                case 'google.emails.result':
+                    if (data.emails && data.emails.length > 0) {
+                        let emailList = '📧 **Recent Emails:**\n\n';
+                        data.emails.forEach((e, i) => {
+                            emailList += `${i + 1}. **${e.subject || 'No subject'}**\n   From: ${e.from}\n   ${e.snippet?.substring(0, 100)}...\n\n`;
+                        });
+                        addTranscript('ara', emailList);
+                    } else {
+                        addTranscript('ara', '📧 No emails found');
+                    }
+                    break;
+
+                case 'google.files.result':
+                    if (data.files && data.files.length > 0) {
+                        let fileList = '📁 **Google Drive Files:**\n\n';
+                        data.files.forEach((f, i) => {
+                            fileList += `${i + 1}. ${f.name}\n`;
+                        });
+                        addTranscript('ara', fileList);
+                    } else {
+                        addTranscript('ara', '📁 No files found');
+                    }
+                    break;
+
+                case 'google.file.content.result':
+                    addTranscript('ara', `📄 **File Content:**\n\n${data.content?.substring(0, 2000)}${data.content?.length > 2000 ? '...(truncated)' : ''}`);
+                    break;
+
+                case 'google.calendar.result':
+                    if (data.events && data.events.length > 0) {
+                        let eventList = '📅 **Upcoming Events:**\n\n';
+                        data.events.forEach((e, i) => {
+                            const start = e.start ? new Date(e.start).toLocaleString() : 'TBD';
+                            eventList += `${i + 1}. **${e.summary}**\n   ${start}\n   ${e.location || ''}\n\n`;
+                        });
+                        addTranscript('ara', eventList);
+                    } else {
+                        addTranscript('ara', '📅 No upcoming events');
+                    }
+                    break;
+
+                case 'google.error':
+                    addTranscript('ara', `⚠️ Google error: ${data.error}`);
+                    break;
+            }
+        }
+
+        // Play audio
+        function playAudio(base64) {
+            if (!audioCtx) return;
+
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+
+            const int16 = new Int16Array(bytes.buffer);
+            const float32 = new Float32Array(int16.length);
+            for (let i = 0; i < int16.length; i++) {
+                float32[i] = int16[i] / 32768.0;
+            }
+
+            const buffer = audioCtx.createBuffer(1, float32.length, 24000);
+            buffer.copyToChannel(float32, 0);
+
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioCtx.destination);
+
+            if (nextPlayTime < audioCtx.currentTime) {
+                nextPlayTime = audioCtx.currentTime;
+            }
+            source.start(nextPlayTime);
+            nextPlayTime += buffer.duration;
+        }
+
+        // Start recording
+        function startRecording() {
+            // Force reset isSpeaking if stuck (backup recovery)
+            if (isSpeaking && Date.now() - lastSpeakingStart > 30000) {
+                console.log('[Recovery] Force resetting isSpeaking after 30s');
+                isSpeaking = false;
+                setState('idle');
+            }
+
+            if (!isConnected) {
+                console.log('[Recording] Not connected');
+                return;
+            }
+            if (isSpeaking) {
+                console.log('[Recording] Blocked - Ara is speaking');
+                return;
+            }
+
+            isRecording = true;
+            setState('recording');
+            updateStatus('Listening...', true);
+            resetIdleTimer(); // Reset idle timer on activity
+            console.log('[Recording] Started');
+
+            // Resume audio context if suspended (iOS Safari requirement)
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Track when speaking started for timeout recovery
+        let lastSpeakingStart = 0;
+
+        // Stop recording and commit
+        function stopRecording() {
+            if (!isRecording) return;
+
+            isRecording = false;
+            setState('processing');
+            updateStatus('Processing...', true);
+            resetIdleTimer(); // Reset idle timer on activity
+
+            // Commit the audio buffer - tell xAI we're done speaking
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
+                socket.send(JSON.stringify({ type: 'response.create' }));
+            }
+        }
+
+        // UI state management
+        function setState(state) {
+            buttonContainer.classList.remove('recording', 'speaking', 'processing');
+            app.classList.remove('disabled');
+
+            if (state !== 'idle') {
+                buttonContainer.classList.add(state);
+            }
+
+            if (state === 'speaking' || state === 'processing') {
+                app.classList.add('disabled');
+            }
+        }
+
+        function updateStatus(text, active) {
+            status.textContent = text;
+            status.classList.toggle('active', active);
+        }
+
+        // Idle timeout management
+        function startIdleTimer() {
+            resetIdleTimer();
+        }
+
+        function resetIdleTimer() {
+            // Clear existing timers
+            if (idleTimer) clearTimeout(idleTimer);
+            if (idleCountdown) clearInterval(idleCountdown);
+
+            if (!isConnected) return;
+
+            let secondsLeft = Math.floor(IDLE_TIMEOUT_MS / 1000);
+
+            // Update status with countdown in the last 10 seconds
+            idleCountdown = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 10 && secondsLeft > 0 && !isRecording && !isSpeaking) {
+                    updateStatus(`Idle - disconnecting in ${secondsLeft}s`, false);
+                }
+            }, 1000);
+
+            // Set disconnect timer
+            idleTimer = setTimeout(() => {
+                if (isConnected && !isRecording && !isSpeaking) {
+                    console.log('Idle timeout - disconnecting to save costs');
+                    updateStatus('Disconnected (idle)', false);
+                    if (socket) socket.close();
+                }
+            }, IDLE_TIMEOUT_MS);
+        }
+
+        function clearIdleTimer() {
+            if (idleTimer) clearTimeout(idleTimer);
+            if (idleCountdown) clearInterval(idleCountdown);
+            idleTimer = null;
+            idleCountdown = null;
+        }
+
+        function addTranscript(role, text) {
+            const message = document.createElement('div');
+            message.className = `message ${role}`;
+
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = role === 'user' ? 'You' : 'Ara';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+
+            message.appendChild(label);
+            message.appendChild(content);
+            transcript.appendChild(message);
+
+            transcriptContainer.classList.add('visible');
+            transcript.scrollTop = transcript.scrollHeight;
+        }
+
+        // Transcript toggle
+        document.getElementById('transcriptToggle').addEventListener('click', () => {
+            transcriptContainer.classList.toggle('visible');
+        });
+
+        // End button - disconnect immediately
+        document.getElementById('endButton').addEventListener('click', () => {
+            disconnect();
+        });
+
+        // Disconnect function
+        function disconnect() {
+            console.log('[Session] Manual disconnect');
+            if (socket) {
+                socket.close();
+            }
+            cleanup();
+            isConnected = false;
+            connectionDot.classList.remove('connected');
+            document.getElementById('endButton').classList.add('disabled');
+            updateStatus('Tap to connect', false);
+        }
+
+        // Text input elements
+        const textInputContainer = document.getElementById('textInputContainer');
+        const textInput = document.getElementById('textInput');
+        const sendButton = document.getElementById('sendButton');
+
+        // Send text message
+        let pendingTextMessage = null;
+
+        function sendTextMessage() {
+            const text = textInput.value.trim();
+            if (!text) return;
+
+            // If not connected, connect first and queue the message
+            if (!isConnected) {
+                pendingTextMessage = text;
+                textInput.value = '';
+                addTranscript('user', text);
+                connect();
+                return;
+            }
+
+            // Add to transcript
+            addTranscript('user', text);
+            textInput.value = '';
+            resetIdleTimer();
+
+            // Send text via xAI API
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                // Create conversation item with text
+                socket.send(JSON.stringify({
+                    type: 'conversation.item.create',
+                    item: {
+                        type: 'message',
+                        role: 'user',
+                        content: [{ type: 'input_text', text: text }]
+                    }
+                }));
+                // Request response
+                socket.send(JSON.stringify({ type: 'response.create' }));
+            }
+        }
+
+        // Check for pending text message after connection
+        function checkPendingMessage() {
+            if (pendingTextMessage && isConnected && socket && socket.readyState === WebSocket.OPEN) {
+                const text = pendingTextMessage;
+                pendingTextMessage = null;
+                resetIdleTimer();
+                socket.send(JSON.stringify({
+                    type: 'conversation.item.create',
+                    item: {
+                        type: 'message',
+                        role: 'user',
+                        content: [{ type: 'input_text', text: text }]
+                    }
+                }));
+                socket.send(JSON.stringify({ type: 'response.create' }));
+            }
+        }
+
+        sendButton.addEventListener('click', sendTextMessage);
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendTextMessage();
+            }
+        });
+
+        // File upload handling
+        const uploadButton = document.getElementById('uploadButton');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Auto-connect if not connected
+            if (!isConnected) {
+                connect();
+                // Wait for connection
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+            try {
+                if (file.type.startsWith('image/')) {
+                    // Compress image to stay under WebSocket 1MB limit
+                    const compressImage = (file, maxSize = 600) => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                let width = img.width;
+                                let height = img.height;
+
+                                // Scale down if larger than maxSize
+                                if (width > height && width > maxSize) {
+                                    height = (height * maxSize) / width;
+                                    width = maxSize;
+                                } else if (height > maxSize) {
+                                    width = (width * maxSize) / height;
+                                    height = maxSize;
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                // Convert to JPEG for smaller size
+                                resolve(canvas.toDataURL('image/jpeg', 0.6));
+                            };
+                            img.src = URL.createObjectURL(file);
+                        });
+                    };
+
+                    const dataUrl = await compressImage(file);
+                    console.log(`[Image] Compressed to ${(dataUrl.length / 1024).toFixed(0)} KB`);
+                    addTranscript('user', `[Uploaded image: ${file.name}]`);
+
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        // Send image URL to xAI - put image first per xAI Vision docs
+                        socket.send(JSON.stringify({
+                            type: 'conversation.item.create',
+                            item: {
+                                type: 'message',
+                                role: 'user',
+                                content: [
+                                    {
+                                        type: 'image_url',
+                                        image_url: {
+                                            url: dataUrl,
+                                            detail: 'high'
+                                        }
+                                    },
+                                    { type: 'input_text', text: `Please describe what you see in this image.` }
+                                ]
+                            }
+                        }));
+                        socket.send(JSON.stringify({ type: 'response.create' }));
+                    }
+                } else if (file.type === 'application/pdf') {
+                    // Handle PDF files
+                    addTranscript('user', `[Processing PDF: ${file.name}]`);
+
+                    try {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        let fullText = '';
+
+                        // Extract text from all pages
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += `\n--- Page ${i} ---\n${pageText}`;
+                        }
+
+                        console.log(`[PDF] Extracted ${fullText.length} chars from ${pdf.numPages} pages`);
+                        const preview = fullText.substring(0, 300) + '...';
+
+                        // Ask what to do with the PDF
+                        const saveToKB = confirm(`Save "${file.name}" to knowledge base?\n\nClick OK to save for future reference.\nClick Cancel to just discuss it with Ara.`);
+
+                        if (saveToKB && socket && socket.readyState === WebSocket.OPEN) {
+                            // Save to knowledge base silently (no reading aloud)
+                            socket.send(JSON.stringify({
+                                type: 'kb.store',
+                                name: file.name,
+                                content: fullText,
+                                doc_type: 'pdf'
+                            }));
+                            addTranscript('user', `[Saved to knowledge base: ${file.name}]`);
+                        } else {
+                            // Just show in transcript - don't send to Ara (she would recite it)
+                            addTranscript('user', `[PDF uploaded: ${file.name} - ${pdf.numPages} pages]\n${preview}\n\n(Not saved to knowledge base. Ask Ara about it verbally.)`);
+                        }
+                    } catch (pdfErr) {
+                        console.error('PDF extraction error:', pdfErr);
+                        addTranscript('user', `[Error reading PDF: ${pdfErr.message}]`);
+                    }
+                } else {
+                    // Read text file
+                    const text = await file.text();
+                    const preview = text.substring(0, 300) + '...';
+
+                    // Ask what to do with the file
+                    const saveToKB = confirm(`Save "${file.name}" to knowledge base?\n\nClick OK to save for future reference.\nClick Cancel to just discuss it with Ara.`);
+
+                    if (saveToKB && socket && socket.readyState === WebSocket.OPEN) {
+                        // Save to knowledge base silently
+                        socket.send(JSON.stringify({
+                            type: 'kb.store',
+                            name: file.name,
+                            content: text,
+                            doc_type: 'text'
+                        }));
+                        addTranscript('user', `[Saved to knowledge base: ${file.name}]`);
+                    } else {
+                        // Just show in transcript - don't send to Ara (she would recite it)
+                        addTranscript('user', `[File uploaded: ${file.name}]\n${preview}\n\n(Not saved to knowledge base. Ask Ara about it verbally.)`);
+                    }
+                }
+                resetIdleTimer();
+            } catch (err) {
+                console.error('File upload error:', err);
+                addTranscript('user', `[Error uploading file: ${err.message}]`);
+            }
+
+            // Clear file input for next upload
+            fileInput.value = '';
+        });
+
+        // Cleanup
+        function cleanup() {
+            clearIdleTimer(); // Clear idle timer
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioCtx) {
+                audioCtx.close();
+            }
+            socket = null;
+            audioCtx = null;
+            workletNode = null;
+            mediaStream = null;
+            isRecording = false;
+            isSpeaking = false;
+        }
+
+        // Helpers
+        function float32ToInt16(float32) {
+            const int16 = new Int16Array(float32.length);
+            for (let i = 0; i < float32.length; i++) {
+                const s = Math.max(-1, Math.min(1, float32[i]));
+                int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return int16;
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Event listeners
+        talkButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            if (!isConnected) {
+                connect();
+            } else {
+                startRecording();
+            }
+        });
+
+        talkButton.addEventListener('mouseup', () => stopRecording());
+        talkButton.addEventListener('mouseleave', () => stopRecording());
+
+        // Touch events for mobile
+        talkButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!isConnected) {
+                connect();
+            } else {
+                startRecording();
+            }
+        }, { passive: false });
+
+        talkButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopRecording();
+        }, { passive: false });
+
+        talkButton.addEventListener('touchcancel', () => stopRecording());
+
+        // Prevent context menu on long press
+        talkButton.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Initial state - status starts empty
+        updateStatus('', false);
+
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
+        }
+    </script>
+</body>
+
+</html>
