@@ -2,7 +2,7 @@
     "name": "Ara Voice",
     "short_name": "Ara",
     "description": "AI Voice Assistant",
-    "start_url": "/",
+    "start_url": "/Ara/",
     "display": "standalone",
     "background_color": "#0a0a0f",
     "theme_color": "#a855f7",
