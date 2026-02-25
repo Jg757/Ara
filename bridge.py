@@ -82,10 +82,12 @@ async def proxy_handler(client_ws):
             try:
                 from memory import MemoryManager
                 memory_context = MemoryManager.load_memory()
-                print(f"Loaded memory: {len(memory_context)} chars")
+                profile_context = MemoryManager.load_user_profile()
+                print(f"Loaded memory: {len(memory_context)} chars, profile: {len(profile_context)} chars")
             except Exception as e:
                 print(f"Warning: Could not load memory: {e}")
                 memory_context = ""
+                profile_context = ""
 
             # Inject current date/time and elapsed time since last contact
             now = datetime.now(ZoneInfo("America/New_York"))
@@ -123,9 +125,9 @@ async def proxy_handler(client_ws):
             except Exception as e:
                 print(f"[Time] Could not calculate elapsed time: {e}")
 
-            # Combine persona + time + memory (original working approach)
-            full_instructions = f"{persona_instructions}{time_context}{memory_context}"
-            print(f"Persona: {len(persona_instructions)} chars, Memory: {len(memory_context)} chars")
+            # Combine persona + profile + time + memory
+            full_instructions = f"{persona_instructions}{profile_context}{time_context}{memory_context}"
+            print(f"Persona+Profile: {len(persona_instructions)+len(profile_context)} chars, Memory: {len(memory_context)} chars")
             print(f"Total instructions: {len(full_instructions)} chars")
 
             config = {
@@ -603,6 +605,13 @@ async def proxy_handler(client_ws):
                                 except:
                                     pass
                                 print(f"Saved user: {transcript[:50]}...")
+                                # Trigger background fact extraction roughly every 5 messages
+                                if not hasattr(client_ws, 'msg_count'):
+                                    client_ws.msg_count = 0
+                                client_ws.msg_count += 1
+                                if client_ws.msg_count % 5 == 0:
+                                    asyncio.create_task(run_background_fact_extraction())
+                        
                         
                         # ============ HANDLE FUNCTION CALLS FROM ARA ============
                         # When Ara calls retrieve_email, retrieve_calendar, or retrieve_files
@@ -879,33 +888,72 @@ async def proxy_handler(client_ws):
         try:
              await client_ws.close()
         except:
-            pass
-    print("Disconnecting.")
+             pass
+             
+    # Trigger final fact extraction on disconnect
+    print("Client disconnected, running final fact extraction...")
+    await run_background_fact_extraction()
+
+async def run_background_fact_extraction():
+    """Runs fact extraction on the recent memory buffer."""
+    try:
+        from memory import MemoryManager
+        from fact_extractor import extract_facts
+        
+        # Load the recent history that hasn't been extracted yet
+        # For safety, let's just grab the last 20 messages.
+        # It's an overlapping window, but fact_extractor won't duplicate facts
+        # if the attributes match existing ones.
+        history = MemoryManager.load_memory()
+        if not history.strip():
+            return
+            
+        print("[FactExtractor] Running on recent conversation...")
+        result = await extract_facts(history)
+        new_facts = result.get("new_facts", [])
+        
+        if new_facts:
+            MemoryManager.add_facts_to_profile(new_facts)
+            print(f"[FactExtractor] Saved {len(new_facts)} new facts.")
+        else:
+            print("[FactExtractor] No new facts found.")
+    except Exception as e:
+        print(f"[FactExtractor] Error during background extraction: {e}")
+
 
 async def main():
     port = int(os.getenv("PORT", 8765))
     host = "0.0.0.0"
     
-    # Auto-index all memories into ChromaDB in a background thread
-    # (ChromaDB doesn't persist on Cloud Run, so we rebuild from agent_memory.json each time)
-    # Must run in background so the WebSocket server starts immediately for Cloud Run health checks
+    # Auto-index all memories into ChromaDB
     import threading
     def _index_memories():
         try:
             from vector_memory import init_vector_memory
             vm = init_vector_memory()
             vm.index_all_memories()
-        except Exception as e:
-            print(f"[Startup] Vector memory indexing error (non-fatal): {e}")
+        except:
+            pass
     
     threading.Thread(target=_index_memories, daemon=True).start()
     
+    # Cloud Run Healthcheck handler using the newer websockets 14+ API
+    # websockets.serve now handles process_request differently.
+    async def process_request(connection, request):
+        if request.path == "/" or request.path == "/health":
+            import websockets.http11
+            return websockets.http11.Response(200, "OK", [], b"OK\n")
+        return None
+
     print(f"Starting Bridge on ws://{host}:{port}")
-    async with websockets.serve(proxy_handler, host, port):
+    async with websockets.serve(proxy_handler, host, port, process_request=process_request):
         await asyncio.get_running_loop().create_future()  # Run forever
 
 if __name__ == "__main__":
     try:
+        import os
+        # Disable ChromaDB telemetry which crashes on Cloud Run
+        os.environ["ANONYMIZED_TELEMETRY"] = "False"
         asyncio.run(main())
     except KeyboardInterrupt:
         print("\nStopping bridge.")

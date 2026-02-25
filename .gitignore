@@ -22,3 +22,4 @@ chroma_db/
 
 # Backups
 *.zip
+user_profile.json

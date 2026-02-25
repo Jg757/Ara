@@ -40,7 +40,13 @@ class VectorMemory:
         return hashlib.md5(content.encode()).hexdigest()
     
     def add_memory(self, role: str, text: str):
-        """Add a single memory to the vector store."""
+        """
+        Adds a single memory. 
+        Note: In the chunked system, single-line adds are less useful for context.
+        We will rely primarily on batch indexing or chunking at the bridge level.
+        For now, this just adds the single line so live memory works somewhat, 
+        but index_all_memories provides the true overlapping chunks.
+        """
         if not text or not text.strip():
             return
             
@@ -53,12 +59,16 @@ class VectorMemory:
         
         self._collection.add(
             documents=[text],
-            metadatas=[{"role": role}],
+            metadatas=[{"role": role, "type": "single"}],
             ids=[memory_id]
         )
     
-    def index_all_memories(self):
-        """Index all memories from the JSON file into ChromaDB (fast batch mode)."""
+    def index_all_memories(self, chunk_size=5, overlap=2):
+        """
+        Index all memories from the JSON file into ChromaDB in overlapping chunks.
+        chunk_size: number of turns per chunk
+        overlap: number of turns to overlap with the previous chunk
+        """
         if not os.path.exists(MEMORY_FILE):
             print("[VectorMemory] No memory file found")
             return 0
@@ -80,24 +90,35 @@ class VectorMemory:
         except Exception as e:
             print(f"[VectorMemory] Error resetting collection: {e}")
         
-        # Prepare all entries
+        # Create overlapping chunks
         documents = []
         metadatas = []
         ids = []
         
-        for entry in history:
-            role = entry.get("role", "user")
-            text = entry.get("text", "")
-            if text and text.strip():
-                memory_id = self._generate_id(text, role)
-                if memory_id not in ids:  # Avoid duplicates in batch
-                    documents.append(text)
-                    metadatas.append({"role": role})
-                    ids.append(memory_id)
+        step = max(1, chunk_size - overlap)
         
-        # Batch add in chunks of 100
+        for i in range(0, len(history), step):
+            chunk = history[i:i + chunk_size]
+            if not chunk:
+                break
+                
+            # Combine the turns into a single narrative block
+            chunk_text = "\n".join([f"{turn.get('role', 'unknown')}: {turn.get('text', '')}" for turn in chunk if turn.get('text', '').strip()])
+            
+            if not chunk_text.strip():
+                continue
+                
+            # Use the first timestamp or a hash of the text for ID
+            chunk_id = hashlib.md5(chunk_text.encode()).hexdigest()
+            
+            if chunk_id not in ids:
+                documents.append(chunk_text)
+                metadatas.append({"role": "context_chunk", "type": "chunk"})
+                ids.append(chunk_id)
+        
+        # Batch add in chunks of 50
         added = 0
-        batch_size = 100
+        batch_size = 50
         for i in range(0, len(documents), batch_size):
             batch_docs = documents[i:i+batch_size]
             batch_meta = metadatas[i:i+batch_size]
@@ -146,7 +167,10 @@ class VectorMemory:
         
         context = "\n[Relevant Past Memories]:\n"
         for role, text in memories:
-            context += f"{role}: {text}\n"
+            if role == "context_chunk":
+                context += f"---\n{text}\n---\n"
+            else:
+                context += f"{role}: {text}\n"
         
         return context
 

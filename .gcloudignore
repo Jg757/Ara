@@ -18,3 +18,5 @@ sw.js
 manifest.json
 index.html
 inspect_session.py
+user_profile.json
+agent_memory.json

@@ -10,3 +10,5 @@ google_token.pickle
 google_credentials.json
 *.md
 ara.html
+user_profile.json
+agent_memory.json
